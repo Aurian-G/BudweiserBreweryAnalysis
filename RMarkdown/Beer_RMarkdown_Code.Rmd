@@ -134,3 +134,111 @@ for(i in df$Style)
   }
 
 newdf = as.data.frame(newcol)
+
+#Filter out Ale and IPA only
+Aledf = df %>% filter(grepl("Ale",df$Style))
+IPAdf = df %>% filter(grepl("IPA",df$Style))
+
+#Create new DF
+AleIPA = full_join(IPAdf,Aledf)
+names(AleIPA)[1] = "Name"
+names(AleIPA)[8] = "Brewery"
+
+#KNN
+library(class)
+library(caret)
+library(e1071)
+
+
+#Create new column of factors for Ale and IPA
+Style_Type = c()
+for(i in grepl("Ale",AleIPA$Style))
+  {
+  if(i == "TRUE")
+    {
+    Style_Type = c(Style_Type,"Ale")
+    }else{
+    Style_Type = c(Style_Type,"IPA")
+    }
+}
+
+#Bind column to df
+AleIPA = cbind(AleIPA,Style_Type)
+
+#Turn Style_Type to factor
+AleIPA$Style_Type = as.factor(AleIPA$Style_Type)
+
+#Turn IBU to numeric
+AleIPA$IBU = as.numeric(AleIPA$IBU)
+str(AleIPA)
+summary(AleIPA)
+dim(AleIPA)
+
+#Check missing values
+gg_miss_var(AleIPA)
+
+#Filter them out to do training on data set
+AleIPA = AleIPA %>% filter(!is.na(ABV) & !is.na(IBU))
+dim(AleIPA)
+
+##70/30 Test Train Set for kNN
+splitPerc = .80
+iterations = 200
+numks = 90
+
+masterAcc = matrix(nrow = iterations, ncol = numks)
+
+for(j in 1:iterations)
+{
+  trainIndices = sample(1:dim(AleIPA)[1],round(splitPerc * dim(AleIPA)[1]))
+  train = AleIPA[trainIndices,]
+  test = AleIPA[-trainIndices,]
+  for(i in 1:numks)
+  {
+    classifications = knn(train[,c(3,4)],test[,c(3,4)],train$Style_Type, prob = TRUE, k = i)
+    table(classifications,test$Style_Type)
+    CM = confusionMatrix(table(classifications,test$Style_Type))
+    masterAcc[j,i] = CM$overall[1]
+  }
+  
+}
+
+MeanAcc = colMeans(masterAcc)
+
+#External CV Method
+#k=6 86.13% accuracy
+MeanAcc = as.data.frame(MeanAcc)
+MeanAcc$k = 1:90
+
+MeanAcc%>%
+  ggplot(aes(x=k,y=MeanAcc))+
+  geom_line()
+
+##Internal CV with kNN
+iterations = 200
+numks = 90
+
+masterAcc = matrix(nrow = iterations, ncol = numks)
+
+for(i in 1:iterations)
+{
+  for(j in 1:numks)
+  {
+    classifications = knn.cv(AleIPA[,c(3,4)], AleIPA$Style_Type, prob = TRUE, k = j)
+    table(classifications,AleIPA$Style_Type)
+    CM = confusionMatrix(table(classifications,AleIPA$Style_Type))
+    masterAcc[i,j] = CM$overall[1]
+  }
+  
+}
+
+MeanAcc = colMeans(masterAcc)
+
+#Internal CV Method
+#k=8 86.66% accuracy
+MeanAcc = as.data.frame(MeanAcc)
+MeanAcc$k = 1:90
+
+MeanAcc%>%
+  ggplot(aes(x=k,y=MeanAcc))+
+  geom_line()
