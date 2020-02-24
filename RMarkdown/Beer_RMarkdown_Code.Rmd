@@ -1,0 +1,136 @@
+---
+title: "Case_Study_EDA"
+author: "Aurian Ghaemmaghami"
+date: "2/22/2020"
+output: html_document
+---
+
+options(max.print=10000)
+
+#Load in packages
+library(ggplot2)
+library(dplyr)
+library(naniar)
+library(stringr)
+library(htmlwidgets)
+
+#Read in Beers CSV
+beer = read.csv(file.choose(), header=TRUE)
+
+#Read in Breweries CSV
+brew = read.csv(file.choose(), header=TRUE)
+
+#How many Breweries present in each state
+brew %>%
+  select(State)%>%
+  ggplot(aes(x=State, fill = State))+
+  geom_bar()+
+  geom_text(stat='count', aes(label=..count..), vjust=-0.5)
+
+
+#Change brewery label so it matches beer df
+names(brew)[1] = "Brewery_id"
+
+#Change brewery IDs to factors
+beer$Brewery_id = as.factor(beer$Brewery_id)
+brew$Brewery_id = as.factor(brew$Brewery_id)
+
+#Join DF by Brewery ID's and show top and bottom 6
+df = inner_join(beer,brew, by = "Brewery_id")
+head(df)
+tail(df)
+
+#Check for NA's... we can see ABV and IBU have NA's only
+gg_miss_var(df)
+
+#Compute median ABV and IBU for reach state. Then compare with bar chart. Handle NA's
+df %>%
+  filter(!is.na(ABV) & !is.na(IBU))%>%
+  group_by(State)%>%
+  summarize(MedianABV = median(ABV), medianIBU = median(IBU))%>%
+  print(n=50)
+
+#Create bar chart of median ABV for each State
+df %>%
+  filter(!is.na(ABV) & !is.na(IBU))%>%
+  group_by(State)%>%
+  summarize(MedianABV = median(ABV), MedianIBU = median(IBU))%>%
+  ggplot(aes(x=State, y = MedianABV, fill=State))+
+  geom_bar(stat="identity")
+  
+#Create bar chart of median IBU for each State
+df %>%
+  filter(!is.na(ABV) & !is.na(IBU))%>%
+  group_by(State)%>%
+  summarize(MedianABV = median(ABV), MedianIBU = median(IBU))%>%
+  ggplot(aes(x=State, y = MedianIBU, fill=State))+
+  geom_bar(stat="identity")
+
+#Which state has the HIGHEST ABV
+#Highest ABV - Colorado!!
+df %>%
+  filter(!is.na(ABV))%>%
+  group_by(State)%>%
+  summarize(MaxABV = max(ABV))%>%
+  ggplot(aes(x=State, y = MaxABV, fill=State))+
+  geom_bar(stat="identity")
+
+#What value is the ABV for Colorado
+#Lee Hill Series Vol. 5 - Belgian Style Quadrupel Ale @ 0.128
+coloradodf = df %>% filter(State == " CO")
+coloradodf = coloradodf[order(coloradodf$ABV, decreasing=TRUE),]
+head(coloradodf,1)
+
+#Highest IBU is Oregon
+df %>%
+  filter(!is.na(IBU))%>%
+  group_by(State)%>%
+  summarize(MaxIBU = max(IBU))%>%
+  ggplot(aes(x=State, y = MaxIBU, fill=State))+
+  geom_bar(stat="identity")
+
+#What value is the IBU for Oregon
+#Oregon Bitter Bitch Imperial IPA - 138
+oregondf = df %>% filter(State == " OR")
+oregondf = oregondf[order(oregondf$IBU, decreasing=TRUE),]
+head(oregondf,1)
+
+#Distribution of ABV variable
+#Distribution looks slightly right skewed
+df %>%
+  filter(!is.na(ABV))%>%
+  ggplot(aes(x=ABV))+
+  geom_histogram(fill="blue", col= "red")
+  
+#Summary stats of ABV variable
+df%>%
+  filter(!is.na(ABV))%>%
+  summarize(MeanABV = mean(ABV), SDABV = sd(ABV), MedianABV = median(ABV), MaxABV = max(ABV), MinABV = min(ABV), count = n())
+
+#Relationship between ABV and IBV(Bitterness)?
+#We can see a positive linear correlation with IBU and ABV.
+#AS the bitterness is higher, the ABV usually increases as well.
+#This makes sense since the higher percentage of alcohol will most
+#likely make your drink more bitter
+df %>%
+  filter(!is.na(ABV) & !is.na(IBU))%>%
+  ggplot(aes(x=IBU, y=ABV))+
+  geom_point()+
+  geom_smooth(method="lm", col = "blue")+
+  ggtitle("Relationship between IBU and ABV")
+
+#KNN Classification of IPA or Ale based on IBU and ABV explanatory variables
+newcol = c()
+for(i in df$Style)
+  {
+  newstring = unlist(strsplit(i, " "))
+  for(j in newstring)
+    {
+    if(j == "Ale" | j == "IPA")
+      {
+      newcol = c(newcol,i)
+      }
+    }
+  }
+
+newdf = as.data.frame(newcol)
