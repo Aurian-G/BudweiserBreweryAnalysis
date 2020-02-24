@@ -20,6 +20,9 @@ beer = read.csv(file.choose(), header=TRUE)
 #Read in Breweries CSV
 brew = read.csv(file.choose(), header=TRUE)
 
+
+##Question 1
+
 #How many Breweries present in each state
 brew %>%
   select(State)%>%
@@ -27,6 +30,8 @@ brew %>%
   geom_bar()+
   geom_text(stat='count', aes(label=..count..), vjust=-0.5)
 
+
+##Question 2
 
 #Change brewery label so it matches beer df
 names(brew)[1] = "Brewery_id"
@@ -37,11 +42,27 @@ brew$Brewery_id = as.factor(brew$Brewery_id)
 
 #Join DF by Brewery ID's and show top and bottom 6
 df = inner_join(beer,brew, by = "Brewery_id")
+
+#Print top 6 observations of merged beer data frames
 head(df)
+
+#Print bottom 6 observations of merged beer data frames
 tail(df)
 
+
+##Question 3
+
 #Check for NA's... we can see ABV and IBU have NA's only
+#1005 Missing Values for IBU
+#62 Missing Values for ABC
 gg_miss_var(df)
+ibuc = df %>% filter(!is.na(IBU))
+abvc = df %>% filter(!is.na(ABV))
+dim(df)[1] - dim(ibuc)[1]
+dim(df)[1] - dim(abvc)[1]
+
+
+##Question 4
 
 #Compute median ABV and IBU for reach state. Then compare with bar chart. Handle NA's
 df %>%
@@ -65,6 +86,9 @@ df %>%
   summarize(MedianABV = median(ABV), MedianIBU = median(IBU))%>%
   ggplot(aes(x=State, y = MedianIBU, fill=State))+
   geom_bar(stat="identity")
+
+
+##Question 5
 
 #Which state has the HIGHEST ABV
 #Highest ABV - Colorado!!
@@ -95,17 +119,23 @@ oregondf = df %>% filter(State == " OR")
 oregondf = oregondf[order(oregondf$IBU, decreasing=TRUE),]
 head(oregondf,1)
 
+
+##Question 6
+
 #Distribution of ABV variable
 #Distribution looks slightly right skewed
 df %>%
   filter(!is.na(ABV))%>%
   ggplot(aes(x=ABV))+
   geom_histogram(fill="blue", col= "red")
-  
+
 #Summary stats of ABV variable
 df%>%
   filter(!is.na(ABV))%>%
   summarize(MeanABV = mean(ABV), SDABV = sd(ABV), MedianABV = median(ABV), MaxABV = max(ABV), MinABV = min(ABV), count = n())
+
+
+##Question 7
 
 #Relationship between ABV and IBV(Bitterness)?
 #We can see a positive linear correlation with IBU and ABV.
@@ -119,22 +149,10 @@ df %>%
   geom_smooth(method="lm", col = "blue")+
   ggtitle("Relationship between IBU and ABV")
 
+
+##Question 8
+
 #KNN Classification of IPA or Ale based on IBU and ABV explanatory variables
-newcol = c()
-for(i in df$Style)
-  {
-  newstring = unlist(strsplit(i, " "))
-  for(j in newstring)
-    {
-    if(j == "Ale" | j == "IPA")
-      {
-      newcol = c(newcol,i)
-      }
-    }
-  }
-
-newdf = as.data.frame(newcol)
-
 #Filter out Ale and IPA only
 Aledf = df %>% filter(grepl("Ale",df$Style))
 IPAdf = df %>% filter(grepl("IPA",df$Style))
@@ -148,7 +166,6 @@ names(AleIPA)[8] = "Brewery"
 library(class)
 library(caret)
 library(e1071)
-
 
 #Create new column of factors for Ale and IPA
 Style_Type = c()
