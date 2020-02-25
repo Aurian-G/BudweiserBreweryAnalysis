@@ -13,6 +13,9 @@ library(dplyr)
 library(naniar)
 library(stringr)
 library(htmlwidgets)
+library(class)
+library(caret)
+library(e1071)
 
 #Read in Beers CSV
 beer = read.csv(file.choose(), header=TRUE)
@@ -259,3 +262,136 @@ MeanAcc$k = 1:90
 MeanAcc%>%
   ggplot(aes(x=k,y=MeanAcc))+
   geom_line()
+  
+#Naive-Bayes Approach
+#200 iterations then taking the average accuracy percentage
+#84.57% accuracy
+iterations = 200
+masterAcc = matrix(nrow = iterations, ncol = 1)
+
+for(i in 1:iterations)
+{
+  trainIndices = sample(dim(AleIPA)[1], round(.7*dim(AleIPA)[1]))
+  train = AleIPA[trainIndices,]
+  test = AleIPA[-trainIndices,]
+  
+  model = naiveBayes(train[,c(3,4)],train$Style_Type)
+  classification = predict(model,test[,c(3,4)])
+  CM = confusionMatrix(classification,test$Style_Type)
+  masterAcc[i] = CM$overall[1]
+}
+
+MeanAcc = colMeans(masterAcc)
+MeanAcc
+CM
+
+
+##Question 9
+
+#Find any useful inference from data
+#Look at association between ounces of liquid compared to ABV and IBU
+cleandf = df %>% filter(!is.na(ABV) & !is.na(IBU))
+summary(cleandf)
+str(cleandf)
+
+#Create factor level for ounces
+cleandf$Fact_Ounces = cut(cleandf$Ounces, breaks = c(8,13,20,35), labels = c("Low", "Medium", "High"))
+
+#Factor Ounces column
+cleandf$Ounces = as.factor(cleandf$Ounces)
+
+#We see 12 and 16 are the majority so let's filter those out and check out some distributions and summary statistics
+df1216 = cleandf %>% filter(Ounces == 16.0 | Ounces == 12.0 | Ounces == 16 | Ounces == 12)
+
+#Turn ounces to factor levels
+df1216$Ounces = as.factor(df1216$Ounces)
+
+#Summary Statistics and Count of each
+#12 ounces has count of 906 after you remove NA IBU and ABV values
+#16 ounces has count of 479 after you remove NA IBU and ABV values
+
+#ABV
+df1216 %>%
+  group_by(Ounces)%>%
+  select(ABV)%>%
+  summarize(Count = n(), Mean = mean(ABV), StdDev = sd(ABV), Max = max(ABV), Min = min(ABV))
+
+#IBU
+df1216 %>%
+  group_by(Ounces)%>%
+  select(IBU)%>%
+  summarize(Count = n(), Mean = mean(IBU), StdDev = sd(IBU), Max = max(IBU), Min = min(IBU))
+
+##Normality Assumptions for ABV & IBU
+#Histogram Distribution
+df1216 %>%
+  select(Ounces, ABV, IBU)%>%
+  ggplot(aes(x=IBU, fill = Ounces))+
+  geom_histogram(col = "black")+
+  ggtitle("Histogram Distribution of IBU/ABV for 12 & 16 Ounces")+
+  facet_wrap(~Ounces)
+
+#QQPlot Distribution
+#We see some departures from normality however we will continue to move forward with the
+#normality assumption since there is enough samples to assert the Central Limit Theorem
+qplot(sample=ABV, data=df1216, color=Ounces)
+
+##Equal Standard Deviations for ABV?
+df1216 %>%
+  select(Ounces,ABV,IBU)%>%
+  ggplot(aes(x=Ounces, y=ABV, fill = Ounces))+
+  geom_boxplot()+
+  coord_flip()+
+  ggtitle("Box Plot Distribution of ABV for 12 & 16 Ounces")
+
+##Equal Standard Deviations for IBU?
+df1216 %>%
+  select(Ounces,ABV,IBU)%>%
+  ggplot(aes(x=Ounces, y=IBU, fill = Ounces))+
+  geom_boxplot()+
+  coord_flip()+
+  ggtitle("Box Plot Distribution of IBU for 12 & 16 Ounces")
+
+#Dot plot for ABV
+df1216 %>%
+  select(Ounces,ABV)%>%
+  ggplot(aes(x=Ounces, y=ABV, color = Ounces))+
+  geom_point()+
+  ggtitle("Dot Plot Distribution of ABV for 12 & 16 Ounces")
+  
+#Dot plot for IBU
+df1216 %>%
+  select(Ounces,IBU)%>%
+  ggplot(aes(x=Ounces, y=IBU, color = Ounces))+
+  geom_point()+
+  ggtitle("Dot Plot Distribution of IBU for 12 & 16 Ounces")
+  
+##We can move forward that the both ABV and IBU for groups 12 & 16 are both equal from
+#Visual interpretation via box plots and dot plots
+#We will also move forward with independence of samples since we don't know if they were #sampled randomly or not
+#We will administer a 2 sample t-test with 95% confidence on whether or not 16 ounces has a higher IBU than 12 ounces or not.
+#We will administer a 2 sample t-test with 95% confidence on whether or not 16 ounces has a higher ABV than 12 ounces or not.
+t.test(IBU~Ounces, data = df1216, var.equal = TRUE)
+t.test(ABV~Ounces, data = df1216, var.equal = TRUE)
+
+##Conclusions on analysis above
+
+#For IBU, there is enough evidence to suggest that the true mean average between groups 12 and 16 are different (p-value: 0.01985). We can also suggest that 16 ounces have a higher average of IBU than those of 12 ounces. A 95% confidence interval will show us that there is [0.542,6.288] more bitterness levels (IBU) in 16 ounce beers vs 12 ounce beers.
+
+#For ABV, there is enough evidence to suggest that the true mean average between groups 12 and 16 are different (p-value: <0.00001). We can also suggest that 16 ounces have a higher average of ABV than those of 12 ounces. A 95% confidence interval will show us that there is [0.0018,0.0048] more ABV in 16 ounce beers vs 12 ounce beers.
+
+#Why this is important? Since this data is directly coming from the CEO regarding all company wide data of beers than fall under "Budweiser" company, it is important to know that the ABV and IBU of certain beers should be equal in percentages regardless of the number of fluid ounces put into those drinks. Maybe we can suggest different distillation processes.
+
+##T.tests for Ales and IPAs only
+#More specifically, tests to see if Ale or IPA differ in regards to ABV
+AleIPA_New = AleIPA %>% filter(Ounces == 12 | Ounces == 12.0 | Ounces == 16 | Ounces == 16.0)
+str(AleIPA_New)
+AleIPA_New$Ounces = as.factor(AleIPA_New$Ounces)
+
+#Test
+t.test(ABV~Style_Type, data = AleIPA_New, var.equal = TRUE)
+
+#Conclusion
+#The evidence suggests that the mean average of ABV between groups "Ale" and "IPA" are different. We can stronly assert that the IPA group has a larger mean ABV than Ale drinks. A 95% confidence interval will tell us there is [0.011,0.014] more ABV in IPA's vs Ale's. More specifically, there is about 1.1%-1.4% more ABV in IPA's.
+
+#Why is this important? This will allow the brewery company to assert the claim that their IPA's are stronger than other Ale's. They could then sell more IPA-based drinks in areas where higher ABV is preferred.
