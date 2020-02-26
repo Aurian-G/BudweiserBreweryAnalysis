@@ -7,6 +7,13 @@ output: html_document
 
 options(max.print=10000)
 
+##Introduction
+#Hello and good afternoon. On behalf of the analytics team, we are pleased to present you our
+#results and recommendations based on our analysis of the Beer & Brewery data. We will
+#briefly be going over each of the questions in chronological order where we will provide
+#our findings for each. Considering your schedules are very busy, our goal is to make sure
+#this presentation is concise and to the point.
+
 #Load in packages
 library(ggplot2)
 library(dplyr)
@@ -16,6 +23,9 @@ library(htmlwidgets)
 library(class)
 library(caret)
 library(e1071)
+library(maps)
+library(openintro)
+library(mapproj)
 
 #Read in Beers CSV
 beer = read.csv(file.choose(), header=TRUE)
@@ -352,9 +362,42 @@ AleIPA%>%
 t.test(ABV~Style_Type, data = AleIPA, var.equal = FALSE)
 
 #Conclusion
-#The evidence suggests that the mean average of ABV between groups "Ale" and "IPA" are different. We can stronly assert that the IPA group has a larger mean ABV than Ale drinks. A 95% confidence interval will tell us there is [0.011,0.014] more ABV in IPA's vs Ale's. More specifically, IPA's hold about 1.1%-1.4% more ABV than other Ale's.
+#The evidence suggests that the mean average of ABV between groups "Ale" and "IPA" are
+#different. We can stronly assert that the IPA group has a larger mean ABV than Ale drinks. A
+#95% confidence interval will tell us there is [0.011,0.014] more ABV in IPA's vs Ale's. More
+#specifically, IPA's hold about 1.1%-1.4% more ABV than other Ale's.
 
-#Why is this important? This will allow the brewery company to assert the claim that their IPA's are stronger than other Ale's. They could then sell more IPA-based drinks in areas where higher ABV is preferred.
+#Why is this important? This will allow the brewery company to assert the claim that their
+#IPA's are stronger than other Ale's. They could then sell more IPA-based drinks in areas where
+#higher ABV is preferred.
+
+#Now we will create the logic for a heat map to see which states have highest average ABV
+df$State = str_replace_all(df$State, fixed(" "), "")
+stateabb = c()
+for(i in df$State)
+  {
+  abbr = abbr2state(i)
+  stateabb = c(stateabb,abbr)
+  }
+
+df = cbind(df,stateabb)
+df$region = tolower(df$stateabb)
+states = map_data("state")
+statesdf = left_join(states,df, by="region")
+statesdf = statesdf[order(statesdf$order),]
+
+#Heat map showing the average ABV for each state
+ggplot(statesdf, aes(x=long,y=lat,group=group))+
+  geom_polygon(aes(fill=ABV))+
+  geom_path()+
+  ggtitle("Heap Map of Average ABV for each state")+
+  scale_fill_gradientn(colours=rev(heat.colors(10)),na.value="grey90")+
+  coord_map()
+
+#The Heat Map shows the average ABV across the US so we can give suggestions to CEO's from
+#evidence provided above on which states they can focus selling more IPA drinks based on high
+#ABV by State.
+#The top 3 states with highest average ABV would be good targets to sell more IPA's.
 ```
 
 
