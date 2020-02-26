@@ -24,7 +24,6 @@ library(class)
 library(caret)
 library(e1071)
 library(maps)
-library(openintro)
 library(mapproj)
 
 #Read in Beers CSV
@@ -41,6 +40,7 @@ brew %>%
   select(State)%>%
   ggplot(aes(x=State, fill = State))+
   geom_bar()+
+  ggtitle("Total Number of Breweries in Each State")+
   geom_text(stat='count', aes(label=..count..), vjust=-0.5)
 ```
 
@@ -86,6 +86,7 @@ df %>%
   filter(!is.na(ABV))%>%
   group_by(State)%>%
   summarize(MedianABV = median(ABV))%>%
+  arrange(desc(MedianABV))%>%
   print(n=50)
 
 #Compute Median of IBU by State
@@ -93,6 +94,7 @@ df %>%
   filter(!is.na(IBU))%>%
   group_by(State)%>%
   summarize(MedianIBU = median(IBU))%>%
+  arrange(desc(MedianIBU))%>%
   print(n=50)
 
 #Create bar chart of median ABV for each State
@@ -120,26 +122,32 @@ df %>%
 #Highest ABV - Colorado, Lee Hill Series Vol. 5 - Belgian Style Quadrupel Ale @ 0.128ABV
 #Highest IBU - Oregon, Oregon Bitter Bitch Imperial IPA @ 138IBU
 
-#Bar Chart to compute highest ABV
+#Scatter Plot to compute highest ABV
 df %>%
   filter(!is.na(ABV))%>%
   group_by(State)%>%
   summarize(MaxABV = max(ABV))%>%
-  ggplot(aes(x=State, y = MaxABV, fill=State))+
-  geom_bar(stat="identity")
+  ggplot(aes(x=State, y = MaxABV, color=State))+
+  geom_text(aes(label=State),hjust=0, vjust=0)+
+  geom_point()+
+  ggtitle("Scatter Plot of Max ABV by State")+
+  theme_gray()
 
 #What value is the MAX ABV for Colorado?
 coloradodf = df %>% filter(State == " CO")
 coloradodf = coloradodf[order(coloradodf$ABV, decreasing=TRUE),]
 head(coloradodf,1)
 
-#Bar Chart to compute highest IBU
+#Scatter Plot to compute highest IBU
 df %>%
   filter(!is.na(IBU))%>%
   group_by(State)%>%
   summarize(MaxIBU = max(IBU))%>%
-  ggplot(aes(x=State, y = MaxIBU, fill=State))+
-  geom_bar(stat="identity")
+  ggplot(aes(x=State, y = MaxIBU, color=State))+
+  geom_text(aes(label=State),hjust=0, vjust=0)+
+  geom_point()+
+  ggtitle("Scatter Plot of Max IBU by State")+
+  theme_gray()
 
 #What value is the MAX IBU for Oregon?
 oregondf = df %>% filter(State == " OR")
@@ -154,16 +162,19 @@ head(oregondf,1)
 df %>%
   filter(!is.na(ABV))%>%
   ggplot(aes(x=ABV))+
-  geom_histogram(fill="blue", col= "red")
+  geom_histogram(fill="mediumpurple2", col= "lightcyan3", size=1)+
+  ggtitle("Distribution of ABV Variable")
 
 #Summary stats of ABV variable
-#Average ABV - 0.060
-#Median ABV - 0.014
-#Max ABV - 0.128
-#Min ABV - 0.001
+#Min ABV - 0.1%
+#Q1 - 5%
+#Median ABV - 5.6%
+#Q3 - 6.7%
+#Max ABV - 12.8%
+#Average ABV - 6%
 df%>%
   filter(!is.na(ABV))%>%
-  summarize(MeanABV = mean(ABV), SDABV = sd(ABV), MedianABV = median(ABV), MaxABV = max(ABV), MinABV = min(ABV), count = n())
+  summarize(MeanABV = mean(ABV), SDABV = sd(ABV), MedianABV = median(ABV), MaxABV = max(ABV), MinABV = min(ABV), Q1 = quantile(ABV,0.25), Q3 = quantile(ABV,0.75), Range = max(ABV)-min(ABV), count = n())
 ```
 
 ##Question 7
