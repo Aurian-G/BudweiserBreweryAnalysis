@@ -2,7 +2,9 @@
 title: "Case_Study_EDA"
 author: "Aurian Ghaemmaghami"
 date: "2/22/2020"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 options(max.print=10000)
@@ -25,6 +27,8 @@ library(caret)
 library(e1071)
 library(maps)
 library(mapproj)
+library(openintro)
+install.packages("knitr")
 
 #Read in Beers CSV
 beer = read.csv(file.choose(), header=TRUE)
@@ -401,7 +405,7 @@ statesdf = statesdf[order(statesdf$order),]
 ggplot(statesdf, aes(x=long,y=lat,group=group))+
   geom_polygon(aes(fill=ABV))+
   geom_path()+
-  ggtitle("Heap Map of Average ABV for each state")+
+  ggtitle("Heap Map of Average ABV Per State")+
   scale_fill_gradientn(colours=rev(heat.colors(10)),na.value="grey90")+
   coord_map()
 
