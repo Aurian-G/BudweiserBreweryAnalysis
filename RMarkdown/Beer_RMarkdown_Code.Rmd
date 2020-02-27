@@ -48,9 +48,10 @@ brew = read.csv(file.choose(), header=TRUE)
 #How many Breweries present in each state
 brew %>%
   select(State)%>%
-  ggplot(aes(x=State, fill = State))+
+  ggplot(aes(x=reorder(State,State,function(x)-length(x)), fill = State))+
   geom_bar()+
   ggtitle("Total Number of Breweries in Each State")+
+  xlab("Stat")+
   geom_text(stat='count', aes(label=..count..), vjust=-0.5)
 ```
 
@@ -112,8 +113,9 @@ df %>%
   filter(!is.na(ABV))%>%
   group_by(State)%>%
   summarize(MedianABV = median(ABV))%>%
-  ggplot(aes(x=State, y = MedianABV, fill=State))+
+  ggplot(aes(x=reorder(State,-MedianABV), y = MedianABV, fill=State))+
   geom_bar(stat="identity")+
+  xlab("State")+
   ggtitle("Bar Chart Distribution of Median ABV by State")
   
 #Create bar chart of median IBU for each State
@@ -121,8 +123,9 @@ df %>%
   filter(!is.na(IBU))%>%
   group_by(State)%>%
   summarize(MedianIBU = median(IBU))%>%
-  ggplot(aes(x=State, y = MedianIBU, fill=State))+
+  ggplot(aes(x=reorder(State,-MedianIBU), y = MedianIBU, fill=State))+
   geom_bar(stat="identity")+
+  xlab("State")+
   ggtitle("Bar Chart Distribution of Median IBU by State")
 ```
 
@@ -137,9 +140,10 @@ df %>%
   filter(!is.na(ABV))%>%
   group_by(State)%>%
   summarize(MaxABV = max(ABV))%>%
-  ggplot(aes(x=State, y = MaxABV, color=State))+
+  ggplot(aes(x=reorder(State,-MaxABV), y = MaxABV, color=State))+
   geom_text(aes(label=State),hjust=0, vjust=0)+
   geom_point()+
+  xlab("State")+
   ggtitle("Scatter Plot of Max ABV by State")+
   theme_gray()
 
@@ -153,9 +157,10 @@ df %>%
   filter(!is.na(IBU))%>%
   group_by(State)%>%
   summarize(MaxIBU = max(IBU))%>%
-  ggplot(aes(x=State, y = MaxIBU, color=State))+
+  ggplot(aes(x=reorder(State,-MaxIBU), y = MaxIBU, color=State))+
   geom_text(aes(label=State),hjust=0, vjust=0)+
   geom_point()+
+  xlab("State")+
   ggtitle("Scatter Plot of Max IBU by State")+
   theme_gray()
 
@@ -205,6 +210,81 @@ df %>%
 ##Question 8
 ```{r}
 #KNN Classification of IPA or Ale based on IBU and ABV explanatory variables
+beer_breweries_data1 = df %>% select(c(ABV, IBU, Style, Ounces))
+beer_breweries_data1$IBU<-as.numeric(beer_breweries_data1$IBU)
+str(beer_breweries_data1)
+
+#The following code groups the beers by "IPA," "ALE," and "OTH."
+beer_breweries_data1$BeerType <- ifelse(grepl("Ale$", beer_breweries_data1$Style, ignore.case = T), "ALE",
+ifelse(grepl("IPA$", beer_breweries_data1$Style, ignore.case = T ), "IPA", "OTH"))
+
+#Change BeerType to a factor and IBU/ABV to numeric
+beer_breweries_data1$BeerType = as.factor(beer_breweries_data1$BeerType)
+str(beer_breweries_data1)
+
+#Selecting for only IPAs and ALEs.
+beer_breweries_style = beer_breweries_data1 %>% filter(!is.na(BeerType) & !is.na(IBU) &!is.na(ABV)) %>%  
+  filter(BeerType == "IPA" | BeerType == "ALE")
+summary(beer_breweries_style)
+beer_breweries_style = droplevels(beer_breweries_style, exclude = "OTH")
+beer_breweries_style %>% ggplot(aes(x=IBU, y=ABV, color = BeerType)) + geom_point()
+set.seed(101)
+iterations = 200
+numks = 100
+splitPerc = .7
+masterAcc = matrix(nrow = iterations, ncol = numks)
+for(j in 1:iterations)
+{
+  beerIndices = sample(1:dim(beer_breweries_style)[1],round(splitPerc * dim(beer_breweries_style)[1]))
+  train = beer_breweries_style[beerIndices,]
+  test = beer_breweries_style[-beerIndices,]
+  for(i in 1:numks)
+  {
+    classifications = knn(train[,c(1,2)],test[,c(1,2)],train$BeerType, prob = TRUE, k = i)
+    table(classifications,test$BeerType)
+    CM = confusionMatrix(table(classifications,test$BeerType))
+    masterAcc[j,i] = CM$overall[1]
+  }
+  
+}
+MeanAcc = colMeans(masterAcc)
+plot(seq(1,numks,1),MeanAcc, type = "l")
+which.max(MeanAcc)
+max(MeanAcc)
+## In the graph above, we can see how the accuracy of the model changes with the given number of data points, or "neighbors," taken into account. In the data output here you can see that the accuracy is almost 88% for k=43 .
+```
+
+##Question 8 cont...
+```{r}
+#NaiveBayes Approach
+iterations = 200
+masterAcc = matrix(nrow = iterations)
+splitPerc = .7 #Training / Test split Percentage
+for(j in 1:iterations)
+{
+  beerIndices = sample(1:dim(beer_breweries_style)[1],round(splitPerc * dim(beer_breweries_style)[1]))
+  train = beer_breweries_style[beerIndices,]
+  test = beer_breweries_style[-beerIndices,]
+  
+  model = naiveBayes(train[,c(1,2)],as.factor(train$BeerType))
+  table(predict(model,test[,c(1,2)]),as.factor(test$BeerType))
+  CM = confusionMatrix(table(predict(model,test[,c(1,2)]),as.factor(test$BeerType)))
+  masterAcc[j] = CM$overall[1]
+}
+MeanAcc = colMeans(masterAcc)
+MeanAcc
+
+## We can see that this model achieved a mean accuracy of approximately 86.1%--not quite as high as the accuracy we achieved from using the k-NN model.
+```
+
+##Question 9
+```{r}
+#Find any useful inference from data
+#We would like to test and see if there is a difference in ABV averages for IPA vs Other Ale's
+#More specifically, tests to see if Ale or IPA differ in regards to ABV
+#First we will use the AleIPA Data Frame address assumptions of normality and equal standard
+#deviations prior to selecting the best test to administer for the question of interest above.
+
 #Filter out Ale and IPA only
 Aledf = df %>% filter(grepl("Ale",df$Style))
 IPAdf = df %>% filter(grepl("IPA",df$Style))
@@ -240,102 +320,6 @@ gg_miss_var(AleIPA)
 
 #Filter them out to do training on data set
 AleIPA = AleIPA %>% filter(!is.na(ABV) & !is.na(IBU))
-
-##80/20 Test Train Set for kNN
-splitPerc = .80
-iterations = 200
-numks = 90
-
-masterAcc = matrix(nrow = iterations, ncol = numks)
-
-for(i in 1:iterations)
-{
-  trainIndices = sample(1:dim(AleIPA)[1],round(splitPerc * dim(AleIPA)[1]))
-  train = AleIPA[trainIndices,]
-  test = AleIPA[-trainIndices,]
-  for(j in 1:numks)
-  {
-    classifications = knn(train[,c(3,4)],test[,c(3,4)],train$Style_Type, prob = TRUE, k = j)
-    table(classifications,test$Style_Type)
-    CM = confusionMatrix(table(classifications,test$Style_Type))
-    masterAcc[i,j] = CM$overall[1]
-  }
-  
-}
-
-MeanAcc = colMeans(masterAcc)
-
-#External CV Method
-#k=6 86.13% accuracy
-MeanAcc = as.data.frame(MeanAcc)
-MeanAcc$k = 1:90
-
-MeanAcc%>%
-  ggplot(aes(x=k,y=MeanAcc))+
-  geom_line()
-
-##Internal CV with kNN
-iterations = 200
-numks = 90
-
-masterAcc = matrix(nrow = iterations, ncol = numks)
-
-for(i in 1:iterations)
-{
-  for(j in 1:numks)
-  {
-    classifications = knn.cv(AleIPA[,c(3,4)], AleIPA$Style_Type, prob = TRUE, k = j)
-    table(classifications,AleIPA$Style_Type)
-    CM = confusionMatrix(table(classifications,AleIPA$Style_Type))
-    masterAcc[i,j] = CM$overall[1]
-  }
-  
-}
-
-MeanAcc = colMeans(masterAcc)
-
-#Internal CV Method
-#k=8 86.06% accuracy
-MeanAcc = as.data.frame(MeanAcc)
-MeanAcc$k = 1:90
-
-MeanAcc%>%
-  ggplot(aes(x=k,y=MeanAcc))+
-  geom_line()
-  
-#Naive-Bayes Approach
-#200 iterations then taking the average accuracy percentage
-#84.57% accuracy
-iterations = 200
-masterAcc = matrix(nrow = iterations, ncol = 1)
-
-for(i in 1:iterations)
-{
-  trainIndices = sample(dim(AleIPA)[1], round(.7*dim(AleIPA)[1]))
-  train = AleIPA[trainIndices,]
-  test = AleIPA[-trainIndices,]
-  
-  model = naiveBayes(train[,c(3,4)],train$Style_Type)
-  classification = predict(model,test[,c(3,4)])
-  CM = confusionMatrix(classification,test$Style_Type)
-  masterAcc[i] = CM$overall[1]
-}
-
-MeanAcc = colMeans(masterAcc)
-MeanAcc
-CM
-
-#We would suggest to deploy a kNN model for predictive classification of Ale's vs IPA's with
-#the highest accuracy percentage of 86.13% based on the features of ABV and IBU levels
-```
-
-##Question 9
-```{r}
-#Find any useful inference from data
-#We would like to test and see if there is a difference in ABV averages for IPA vs Other Ale's
-#More specifically, tests to see if Ale or IPA differ in regards to ABV
-#First we will address assumptions of normality and equal standard deviations prior to 
-#selecting the best test to administer for the question of interest above.
 
 #Check Histogram distribution for normality
 AleIPA %>%
