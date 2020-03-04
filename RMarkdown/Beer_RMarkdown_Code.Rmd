@@ -248,7 +248,7 @@ for(j in 1:iterations)
   
 }
 MeanAcc = colMeans(masterAcc)
-plot(seq(1,numks,1),MeanAcc, type = "l")
+plot(seq(1,numks,1),MeanAcc, type = "l", xlab = "k", ylab = "Accuracy", main = "kNN Accuracy Model K 1-100")
 which.max(MeanAcc)
 max(MeanAcc)
 ## In the graph above, we can see how the accuracy of the model changes with the given number of data points, or "neighbors," taken into account. In the data output here you can see that the accuracy is almost 88% for k=43 .
