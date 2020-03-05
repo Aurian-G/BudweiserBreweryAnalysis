@@ -368,13 +368,11 @@ t.test(ABV~Style_Type, data = AleIPA, var.equal = FALSE)
 
 #Conclusion
 #The evidence suggests that the mean average of ABV between groups "Ale" and "IPA" are
-#different. We can stronly assert that the IPA group has a larger mean ABV than Ale drinks. A
+#different. We can stronly assert that the IPA group has a larger mean ABV than Ale drinks.
 #95% confidence interval will tell us there is [0.011,0.014] more ABV in IPA's vs Ale's. More
 #specifically, IPA's hold about 1.1%-1.4% more ABV than other Ale's.
-
 #Why is this important? This will allow the brewery company to assert the claim that their
-#IPA's are stronger than other Ale's. They could then sell more IPA-based drinks in areas where
-#higher ABV is preferred.
+#IPA's are stronger than other Ale's. They could then sell more IPA-based drinks in areas where higher ABV is preferred. Or they could target those areas whenever they are doing a new product launch of an IPA.
 
 #Now we will create the logic for a heat map to see which states have highest average ABV
 df$State = str_replace_all(df$State, fixed(" "), "")
@@ -403,6 +401,17 @@ ggplot(statesdf, aes(x=long,y=lat,group=group))+
 #evidence provided above on which states they can focus selling more IPA drinks based on high
 #ABV by State.
 #The top 3 states with highest average ABV would be good targets to sell more IPA's.
+```
+```{r}
+##Conclusion
+#States with highest breweries – Colorado, California and Michigan
+#States with highest ABV and IBU are Colorado and Oregon
+#Median alcohol content per state is fairly consistent around 6% and median international bitterness per state is very much varied.
+#There is evidence to suggest that a positive linear relationship exists between IBU and ABV
+#K-NN model to identify beer type based on ABV and IBU values – accuracy of 88.16%
+#Target higher ABV areas to produce more IPA’s to increase sales
+#Target higher ABV areas for new IPA product launches
+#Top 3: Texas, South Carolina, Virginia
 ```
 
 
