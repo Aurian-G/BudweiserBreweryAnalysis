@@ -13,6 +13,9 @@
 ##CodeBook REPO  
 #This Repo contains descriptive information regarding the variables, attributes, and data used  
 
+##Data Repo  
+#This Repo contains the two data sets we used for analysis (Beer and Brewery Data Sets)
+
 ##Youtube Links  
 #Aurian - https://youtu.be/FRbt0MTG_X4  
 #Balaji - https://youtu.be/rl-ns9r1shY
