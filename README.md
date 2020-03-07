@@ -1,5 +1,5 @@
 ### DDS6306_Case_Study
-### Case Study Repo for me and Balaji 
+### Brewery Case Study Repo for Aurian and Balaji 
 
 ##RMarkdown Repo  
 #This Repo has our R Markdown file for all analysis questions #1-9, notes, as well as our introduction/conclusion statements
